@@ -1,3 +1,3 @@
-# SFHTML5: Rust and WebAssembly
+# Wasm CG: `wasm-bindgen`
 
-A presentation for https://www.meetup.com/sfhtml5/events/253855867
+A presentation on `wasm-bindgen` for the Wasm CG.
