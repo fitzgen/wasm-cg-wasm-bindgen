@@ -921,6 +921,12 @@ class: center
 
 class: center
 
+### [TC39 Weak Refs and Finalizers!!!!!!!!](https://github.com/tc39/proposal-weakrefs)
+
+---
+
+class: center
+
 ### That `Class.prototype.method.call(receiver, ...)` was as fast as `receiver.method(...)`
 
 ---
@@ -970,6 +976,12 @@ class: center
 class: center
 
 ## Replace generated JS import glue with host bindings
+
+---
+
+class: center
+
+# [Learn more about `wasm-bindgen`'s internal design](https://rustwasm.github.io/wasm-bindgen/contributing/design/index.html)
 
 ---
 
