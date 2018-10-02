@@ -1,0 +1,92 @@
+digraph wasm_bindgen_pipeline {
+    subgraph actual_stuff {
+        node [shape=box];
+
+        annotations [label=<
+                     <table border="0">
+                     <tr><td align="left"><b>src/lib.rs</b></td></tr>
+                     <tr><td align="left"><font face="monospace">#[wasm_bindgen]</font> annotations</td></tr>
+                     </table>
+                     >];
+        annotations -> ast [label="proc-macro frontend", style=dashed, penwidth=2.0, color=blue];
+
+        webidl [label=<
+                <table border="0">
+                <tr><td align="left"><b>Web Standards' Web IDL</b></td></tr>
+                <tr><td align="left">Window.webidl</td></tr>
+                <tr><td align="left">Document.webidl</td></tr>
+                <tr><td align="left">...</td></tr>
+                </table>
+                >];
+        webidl -> ast [label="Web IDL frontend", style=dashed, penwidth=2.0, color=blue];
+
+        ast [label=<<b><font face="monospace">wasm_bindgen_backend::ast::Program</font></b>>];
+        ast -> macro_expanded_rust [label="wasm_bindgen_backend::codegen", face="monospace", style=dashed, penwidth=2.0, color=blue];
+
+        macro_expanded_rust [label=<<table border="0">
+                             <tr><td align="left"><b>Macro-Expanded Rust Source</b></td></tr>
+                             <tr><td align="left">Generated Rust glue code</td></tr>
+                             <tr><td align="left">Generated descriptor functions</td></tr>
+                             <tr><td align="left">Data for custom section</td></tr>
+                             </table>>];
+        macro_expanded_rust -> initial_wasm [label=<<font face="monospace">rustc/LLVM</font>>, style=dashed, penwidth=2.0, color=blue];
+
+        initial_wasm [label=<
+                      <table border="0">
+                      <tr><td align="left"><b>Initial <font face="monospace">.wasm</font> binary</b></td></tr>
+                      <tr><td align="left"><font face="monospace">__wasm_bindgen</font> custom section</td></tr>
+                      </table>
+                      >];
+        initial_wasm -> final_wasm [penwidth=2.0, color=green, label=<
+                                    <table border="0">
+                                    <tr><td align="left">Remove custom section</td></tr>
+                                    <tr><td align="left">Remove descriptor functions</td></tr>
+                                    <tr><td align="left">Simple <font face="monospace">--gc-sections</font></td></tr>
+                                    </table>
+                                    >];
+        initial_wasm -> js_glue [penwidth=2.0, color=green, label=<
+                                 <table border="0">
+                                 <tr><td align="left">Read custom section</td></tr>
+                                 <tr><td align="left">Evaluate descriptor functions</td></tr>
+                                 </table>
+                                 >];
+
+        final_wasm [label=<
+                    <table border="0">
+                    <tr><td align="left"><b>Final <font face="monospace">.wasm</font> binary</b></td></tr>
+                    </table>
+                    >];
+
+
+        js_glue [label=<
+                 <table border="0">
+                 <tr><td align="left"><b>Generated JS glue</b></td></tr>
+                 </table>
+                 >];
+    }
+
+    subgraph legend {
+        node [shape=plaintext];
+
+        key [label=<
+             <table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+             <tr><td><b>Legend</b></td></tr>
+             <tr><td align="right" port="i1"><font face="monospace">cargo build</font></td></tr>
+             <tr><td align="right" port="i2"><font face="monospace">wasm-bindgen</font> CLI</td></tr>
+             </table>
+             >];
+        key2 [label=<
+              <table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+              <tr><td>&nbsp;</td></tr>
+              <tr><td port="i1">&nbsp;</td></tr>
+              <tr><td port="i2">&nbsp;</td></tr>
+              </table>
+              >];
+
+        {
+            rank=same;
+        key:i1:e -> key2:i1:w [style=dashed, penwidth=2.0, color=blue];
+        key:i2:e -> key2:i2:w [penwidth=2.0, color=green];
+        }
+    }
+}
