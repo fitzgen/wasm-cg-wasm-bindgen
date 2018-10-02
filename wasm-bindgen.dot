@@ -5,14 +5,14 @@ digraph wasm_bindgen_pipeline {
         annotations [label=<
                      <table border="0">
                      <tr><td align="left"><b>src/lib.rs</b></td></tr>
-                     <tr><td align="left"><font face="monospace">#[wasm_bindgen]</font> annotations</td></tr>
+                     <tr><td align="left"><font face="Menlo">#[wasm_bindgen]</font>  annotations</td></tr>
                      </table>
                      >];
         annotations -> ast [label="proc-macro frontend", style=dashed, penwidth=2.0, color=blue];
 
         webidl [label=<
                 <table border="0">
-                <tr><td align="left"><b>Web Standards' Web IDL</b></td></tr>
+                <tr><td align="left"><b>Web IDL</b></td></tr>
                 <tr><td align="left">Window.webidl</td></tr>
                 <tr><td align="left">Document.webidl</td></tr>
                 <tr><td align="left">...</td></tr>
@@ -20,8 +20,8 @@ digraph wasm_bindgen_pipeline {
                 >];
         webidl -> ast [label="Web IDL frontend", style=dashed, penwidth=2.0, color=blue];
 
-        ast [label=<<b><font face="monospace">wasm_bindgen_backend::ast::Program</font></b>>];
-        ast -> macro_expanded_rust [label="wasm_bindgen_backend::codegen", face="monospace", style=dashed, penwidth=2.0, color=blue];
+        ast [label=<<b><font face="Menlo">wasm_bindgen_backend::ast::Program</font> </b>>];
+        ast -> macro_expanded_rust [label="wasm_bindgen_backend::codegen", face="Menlo", style=dashed, penwidth=2.0, color=blue];
 
         macro_expanded_rust [label=<<table border="0">
                              <tr><td align="left"><b>Macro-Expanded Rust Source</b></td></tr>
@@ -29,19 +29,20 @@ digraph wasm_bindgen_pipeline {
                              <tr><td align="left">Generated descriptor functions</td></tr>
                              <tr><td align="left">Data for custom section</td></tr>
                              </table>>];
-        macro_expanded_rust -> initial_wasm [label=<<font face="monospace">rustc/LLVM</font>>, style=dashed, penwidth=2.0, color=blue];
+        macro_expanded_rust -> initial_wasm [label=<<font face="Menlo">rustc/LLVM</font> >, style=dashed, penwidth=2.0, color=blue];
 
         initial_wasm [label=<
                       <table border="0">
-                      <tr><td align="left"><b>Initial <font face="monospace">.wasm</font> binary</b></td></tr>
-                      <tr><td align="left"><font face="monospace">__wasm_bindgen</font> custom section</td></tr>
+                      <tr><td align="left"><b>Initial <font face="Menlo">.wasm</font>  binary</b></td></tr>
+                      <tr><td align="left">Compiled descriptor functions</td></tr>
+                      <tr><td align="left"><font face="Menlo">__wasm_bindgen</font>  custom section</td></tr>
                       </table>
                       >];
         initial_wasm -> final_wasm [penwidth=2.0, color=green, label=<
                                     <table border="0">
                                     <tr><td align="left">Remove custom section</td></tr>
                                     <tr><td align="left">Remove descriptor functions</td></tr>
-                                    <tr><td align="left">Simple <font face="monospace">--gc-sections</font></td></tr>
+                                    <tr><td align="left">Simple <font face="Menlo">--gc-sections</font> </td></tr>
                                     </table>
                                     >];
         initial_wasm -> js_glue [penwidth=2.0, color=green, label=<
@@ -53,7 +54,7 @@ digraph wasm_bindgen_pipeline {
 
         final_wasm [label=<
                     <table border="0">
-                    <tr><td align="left"><b>Final <font face="monospace">.wasm</font> binary</b></td></tr>
+                    <tr><td align="left"><b>Final <font face="Menlo">.wasm</font>  binary</b></td></tr>
                     </table>
                     >];
 
@@ -71,8 +72,8 @@ digraph wasm_bindgen_pipeline {
         key [label=<
              <table border="0" cellpadding="2" cellspacing="0" cellborder="0">
              <tr><td><b>Legend</b></td></tr>
-             <tr><td align="right" port="i1"><font face="monospace">cargo build</font></td></tr>
-             <tr><td align="right" port="i2"><font face="monospace">wasm-bindgen</font> CLI</td></tr>
+             <tr><td align="right" port="i1"><font face="Menlo">cargo build</font> </td></tr>
+             <tr><td align="right" port="i2"><font face="Menlo">wasm-bindgen</font>  CLI</td></tr>
              </table>
              >];
         key2 [label=<

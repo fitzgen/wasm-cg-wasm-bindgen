@@ -7,7 +7,7 @@ name: inverse
 layout: true
 class: left, middle, inverse
 
-.footnote[[https://fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
+.footnote[[fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
 
 ---
 
@@ -15,18 +15,18 @@ name: normal
 layout: true
 class: left, middle
 
-.footnote[[https://fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
+.footnote[[fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
 
 ---
 
 class: middle, center
 
-# `wasm-bindgen`
+# `wasm-bindgen` &mdash; how does it work?!
 <br/>
 #### Nick Fitzgerald
 #### [@fitzgen](https://twitter.com/fitzgen) | [@rustwasm](https://twitter.com/rustwasm)
 
-.footnote[[https://fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
+.footnote[[fitzgen.github.io/wasm-cg-wasm-bindgen](https://fitzgen.github.io/wasm-cg-wasm-bindgen)]
 
 ???
 
@@ -55,7 +55,7 @@ class: middle, center
 
 --
 
-#### ⚫ Custom ABI between Rust-generated Wasm and JS
+#### ⚫ Custom ABI between Wasm and JS
 
 --
 
@@ -63,7 +63,7 @@ class: middle, center
 
 --
 
-#### ⚫ Half polyfill for a Host Bindings future
+#### ⚫ Sort of a polyfill for `anyref` and host bindings
 
 ---
 
@@ -328,10 +328,6 @@ import * as wasm from './greet_bg';
 
 // ...
 
-/**
- * Make a greeting!
- * @returns {void}
- */
 export function greet() {
     return wasm.greet();
 }
@@ -353,10 +349,6 @@ class: js-code
 
 // ...
 
-/**
- * Make a greeting!
- * @returns {void}
- */
 export function greet() {
     return wasm.greet();
 }
@@ -377,10 +369,6 @@ import * as wasm from './greet_bg';
 
 // ...
 
-/**
- * Make a greeting!
- * @returns {void}
- */
 export function greet() {
 *   return wasm.greet();
 }
@@ -423,10 +411,6 @@ smorgasbord(
 );
 ```
 
-???
-
-* TODO
-
 ---
 
 class: rust-code
@@ -453,10 +437,6 @@ pub fn smorgasbord(
 }
 ```
 
-???
-
-* TODO
-
 ---
 
 class: rust-code
@@ -482,10 +462,6 @@ pub fn smorgasbord(
     }
 }
 ```
-
-???
-
-* TODO
 
 ---
 
@@ -550,61 +526,6 @@ pub fn smorgasbord(
 
 ---
 
-class: js-code
-
-.filename[pkg/smorgasbord.js]
-
-```js
-const __wbg_call_bd08bd79389c3e82_target = Function.prototype.call;
-
-export function __wbg_call_bd08bd79389c3e82(
-  arg0, arg1, arg2, exnptr
-  ) {
-  try {
-    return addHeapObject(__wbg_call_bd08bd79389c3e82_target.call(
-      getObject(arg0), getObject(arg1), getObject(arg2)
-    ));
-  } catch (e) {
-    const view = getUint32Memory();
-    view[exnptr / 4] = 1;
-    view[exnptr / 4 + 1] = addHeapObject(e);
-  }
-}
-```
-
-???
-
-* this is the import wrapping `Function.prototype.call` that is called by the
-  wasm
-
----
-
-class: js-code
-
-.filename[pkg/smorgasbord.js]
-
-```js
-export function smorgasbord(arg0, arg1, arg2, arg3) {
-  try {
-    return takeObject(wasm.smorgasbord(
-      addBorrowedObject(arg0),
-      addHeapObject(arg1),
-      addBorrowedObject(arg2),
-      arg3 ? 1 : 0
-    ));
-  } finally {
-    stack.pop();
-    stack.pop();
-  }
-}
-```
-
----
-
-TODO
-
----
-
 class: center
 
 # How it's Made
@@ -624,18 +545,437 @@ class: center
 
 ---
 
-exclude: true
+class: center
 
-* wish that WebIDL would specify whether buffer source is const or not
-* wish that TypeScript included whether a method throws or not
+# Passing JS Objects
 
 ---
 
-template: inverse
+### ⚫ Stack for borrowed objects
+### ⚫ Heap w/ simple free list for owned objects
+### ⚫ `i32` at raw ABI level
+
+```
+      Index                     Heap or stack bit
+        |                             |
+        V                             V
++-----------------------------------+---+
+| 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 | 1 |
++-----------------------------------+---+
+```
+
+---
+
+class: rust-code
+.filename[src/by_ref.rs]
+
+```rust
+#[wasm_bindgen]
+pub fn by_ref(a: &JsValue) {
+    // ...
+}
+```
+
+---
+
+class: js-code
+.filename[pkg/by_ref.js]
+
+```js
+import * as wasm from './by_ref_bg';
+
+const stack = [];
+
+function addBorrowedObject(obj) {
+  stack.push(obj);
+  return ((stack.length - 1) << 1) | 1;
+}
+
+export function by_ref(arg0) {
+  try {
+    return wasm.by_ref(addBorrowedObject(arg0));
+  } finally {
+    stack.pop();
+  }
+}
+```
+
+---
+
+class: rust-code
+.filename[src/by_val.rs]
+
+```rust
+#[wasm_bindgen]
+pub fn by_val(a: JsValue) {
+    // ...
+}
+```
+
+---
+
+class: js-code
+.filename[pkg/by_val.js]
+
+```js
+import * as wasm from './by_val_bg';
+
+const slab = [{ obj: undefined }, { obj: null },
+              { obj: true }, { obj: false }];
+let slab_next = slab.length;
+
+function addHeapObject(obj) {
+  if (slab_next === slab.length) slab.push(slab.length + 1);
+  const idx = slab_next;
+  const next = slab[idx];
+
+  slab_next = next;
+
+  slab[idx] = { obj, cnt: 1 };
+  return idx << 1;
+}
+
+export function by_val(arg0) {
+  return wasm.by_val(addHeapObject(arg0));
+}
+
+// ...
+```
+
+---
+
+class: js-code
+.filename[pkg/by_val.js]
+
+```js
+// ...
+
+function dropRef(idx) {
+  idx = idx >> 1;
+  if (idx < 4) return;
+  let obj = slab[idx];
+
+  obj.cnt -= 1;
+  if (obj.cnt > 0) return;
+
+  // If we hit 0 then free up our space in the slab
+  slab[idx] = slab_next;
+  slab_next = idx;
+}
+
+export function __wbindgen_object_drop_ref(i) {
+  dropRef(i);
+}
+```
+
+---
+
+class: rust-code
+.filename[src/jsvalue.rs]
+
+```rust
+pub struct JsValue {
+    idx: u32,
+}
+
+// "private" constructors
+
+impl Drop for JsValue {
+    fn drop(&mut self) {
+        unsafe {
+            __wbindgen_object_drop_ref(self.idx);
+        }
+    }
+}
+```
+
+---
+
 class: center
 
-# THANK YOU!
+# Imported JS Classes with Methods
+
+---
+
+class: rust-code
+.filename[src/append_child.rs]
+
+```rust
+#[wasm_bindgen]
+extern {
+    pub type Node;
+
+    #[wasm_bindgen(method, js_name = appendChild)]
+    fn append_child(this: &Node, child: &Node);
+}
+
+#[wasm_bindgen]
+pub fn do_append(parent: &Node, child: &Node) {
+    parent.append_child(child);
+}
+```
+
+---
+
+class: js-code
+.filename[pkg/append_child.js]
+
+```js
+// ...
+
+const __wbg_appendChild_e6dc06d55fb84bbc_target =
+  Node.prototype.appendChild;
+
+export function __wbg_appendChild_e6dc06d55fb84bbc(arg0, arg1) {
+  __wbg_appendChild_e6dc06d55fb84bbc_target.call(
+    getObject(arg0),
+    getObject(arg1)
+  );
+}
+
+function getObject(idx) {
+  if ((idx & 1) === 1) {
+    return stack[idx >> 1];
+  } else {
+    const val = slab[idx >> 1];
+    return val.obj;
+  }
+}
+```
+
+---
+
+class: center
+
+# Converting into and from the ABI on the Rust side
+
+---
+
+class: rust-code
+
+```rust
+/// An unsafe trait which represents types that are ABI-safe to
+/// pass via raw wasm arguments.
+pub unsafe trait WasmAbi {}
+
+unsafe impl WasmAbi for u32 {}
+unsafe impl WasmAbi for i32 {}
+unsafe impl WasmAbi for f32 {}
+unsafe impl WasmAbi for f64 {}
+```
+
+---
+
+class: rust-code
+
+```rust
+pub trait IntoWasmAbi: WasmDescribe {
+    /// The wasm ABI type that this converts into.
+    type Abi: WasmAbi;
+
+    /// Convert into the raw ABI type so that it can be sent
+    /// across the wasm ABI boundary.
+    fn into_abi(self, extra: &mut Stack) -> Self::Abi;
+}
+```
+
+---
+
+class: rust-code
+
+```rust
+impl IntoWasmAbi for JsValue {
+    type Abi = u32;
+
+    #[inline]
+    fn into_abi(self, _extra: &mut Stack) -> u32 {
+        let ret = self.idx;
+        // Don't run the destructor -- the JS glue will handle it.
+        mem::forget(self);
+        ret
+    }
+}
+```
+
+---
+
+class: rust-code
+
+```rust
+pub trait FromWasmAbi: WasmDescribe {
+    /// The raw wasm ABI type that this converts from.
+    type Abi: WasmAbi;
+
+    /// Recover the value from the raw ABI type.
+    unsafe fn from_abi(js: Self::Abi, extra: &mut Stack) -> Self;
+}
+```
+
+---
+
+class: rust-code
+
+```rust
+impl FromWasmAbi for JsValue {
+    type Abi = u32;
+
+    #[inline]
+    unsafe fn from_abi(idx: u32, _extra: &mut Stack) -> JsValue {
+        JsValue { idx }
+    }
+}
+```
+
+---
+
+class: rust-code
+.filename[src/take_send.rs]
+
+```rust
+#[wasm_bindgen]
+extern {
+    fn send_to_js(val: JsValue);
+}
+
+#[wasm_bindgen]
+pub fn take_from_js(val: JsValue) -> u32 {
+    send_to_js(val);
+    42
+}
+```
+
+---
+
+class: rust-code
+.filename[src/take_send.rs (macro-expanded)]
+
+```rust
+fn send_to_js(val: JsValue) {
+    #[link(wasm_import_module = "pkg/take_send.js")]
+    extern {
+        fn __wbg_sendtojs_8b4761129afd1491(
+            val: <JsValue as IntoWasmAbi>::Abi,
+        );
+    }
+    unsafe {
+        let _ret = {
+            let mut __stack = GlobalStack::new();
+            let val = <JsValue as IntoWasmAbi>::into_abi(
+                val,
+                &mut __stack
+            );
+            __wbg_sendtojs_8b4761129afd1491(val)
+        };
+    }
+}
+```
+
+---
+
+class: rust-code
+.filename[src/take_send.rs (macro-expanded)]
+
+```rust
+#[export_name = "take_from_js"]
+pub extern "C" fn __wasm_bindgen_generated_take_from_js(
+    arg0: <JsValue as FromWasmAbi>::Abi,
+) -> <u32 as ReturnWasmAbi>::Abi {
+    let _ret = {
+        let mut __stack = unsafe { GlobalStack::new() };
+        let arg0 = unsafe {
+            <JsValue as FromWasmAbi>::from_abi(arg0, &mut __stack)
+        };
+        take_from_js(arg0)
+    };
+    <u32 as ReturnWasmAbi>::return_abi(_ret, &mut unsafe {
+        GlobalStack::new()
+    })
+}
+```
+
+---
+
+## There's also
+<br/>
+#### `pub trait RefFromWasmAbi`
+#### `pub trait RefMutFromWasmAbi`
+#### `pub trait OptionIntoWasmAbi`
+#### `pub trait OptionFromWasmAbi`
+#### `pub trait ReturnWasmAbi`
+
+---
+
+class: center
+
+# `WasmDescribe` and the Custom Section
+### Ask about it later if you're curious...
+
+---
+
+class: center
+
+# Wishes
+# <img src="./public/img/genie.png" style="max-height: 2em; max-width: 2em;"/>
+
+---
+
+class: center
+
+### That `Class.prototype.method.call(receiver, ...)` was as fast as `receiver.method(...)`
+
+---
+
+class: center
+
+### That ECMAScript specified its global APIs with Web IDL
+
+---
+
+class: center
+
+### That the `[Throws]` Web IDL attribute was standard, and not just a Gecko-ism
+
+---
+
+class: center
+
+### That Web IDL specified whether a `BufferSource` is const or not
+
+---
+
+class: center
+
+### That TypeScript signatures included whether a function/method throws or not
+
+---
+
+class: center
+
+### That Rust had generic, monomorphized `static`s
+
+---
+
+class: center
+
+# Future Goals
+
+---
+
+class: center
+
+## Replace stack and heap of JS values with `anyref` table
+
+---
+
+class: center
+
+## Replace generated JS import glue with host bindings
+
+---
+
+class: center
+
+# Thank you!
 <br/>
 ### Nick Fitzgerald
-<br/>
 ### [@fitzgen](https://twitter.com/fitzgen) | [@rustwasm](https://twitter.com/rustwasm)
