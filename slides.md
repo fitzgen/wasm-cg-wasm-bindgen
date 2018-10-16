@@ -404,7 +404,7 @@ const owned = {};
 const shouldThrow = Math.random() < 0.5;
 
 smorgasbord(
-  borrowedObject,
+  borrowed,
   owned,
   shouldThrow,
   x => console.log(x)
@@ -506,15 +506,15 @@ pub fn smorgasbord(
     owned: js_sys::Object,
     should_throw: bool,
     callback: &js_sys::Function,
-*) -> Result<JsValue, JsValue> {
+) `-> Result<JsValue, JsValue>` {
     let this = &JsValue::NULL;
-*   callback.call1(this, borrowed.as_ref())?;
-*   callback.call1(this, owned.as_ref())?;
+    callback.call1(this, borrowed.as_ref())`?`;
+    callback.call1(this, owned.as_ref())`?`;
 
     if should_throw {
-*       Err("uh oh!".into())
+        `Err("uh oh!".into())`
     } else {
-*       Ok(42.into())
+        `Ok(42.into())`
     }
 }
 ```
@@ -547,12 +547,12 @@ class: center
 
 class: center
 
-# Passing JS Objects
+# Passing JS Values
 
 ---
 
-### ⚫ Stack for borrowed objects
-### ⚫ Heap w/ simple free list for owned objects
+### ⚫ Stack for borrowed values
+### ⚫ Heap w/ simple free list for owned values
 ### ⚫ `i32` at raw ABI level
 
 ```
